@@ -1,20 +1,10 @@
 from django.shortcuts import render
-from django.http import HttpResponse
-
+from .models import Meetup
+from .forms import RegistrationForm
 # Create your views here.
 
 def index(request):
-    meetups= [{
-        'title': 'A First Meetup',
-        'location': 'US',
-        'slug': 'a-first_meetup'
-        },
-              {
-                  'title':'A second Meetup',
-                  'location':'Paris',
-                  'slug':'a-second-meetup'
-              }
-              ]
+    meetups= Meetup.objects.all()
     
     return render(request, 'meetups/index.html', {
         'show_meetups': True,
@@ -22,12 +12,24 @@ def index(request):
     })
     
 def meetup_details(request, meetup_slug):
-    print(meetup_slug)
-    selected_meetup = {
-        'title': 'A First Meetup',
-        'description': 'This is the first meetup!'
-    }
-    return render(request, 'meetups/meetup-details.html', {
-        'meetup_title': selected_meetup['title'],
-        'meetup_description': selected_meetup['description']
-    })
+    try:
+        if request.method == 'GET':
+            selected_meetup = Meetup.objects.get(slug=meetup_slug)
+            registration_form = RegistrationForm()
+        else:
+            registration_form = RegistrationForm(request.POST)
+            if registration_form.is_valid():
+                participants = registration_form.save()
+                selected_meetup.participants.add(participants)
+                
+                
+        return render(request, 'meetups/meetup-details.html', {
+                'meetup_found': True,
+                'meetup': selected_meetup,
+                'form': registration_form
+            })
+        
+    except Exception as exc:
+        return render(request, 'meetups/meetup-details.html', {
+            'meetup_found': False
+        })
